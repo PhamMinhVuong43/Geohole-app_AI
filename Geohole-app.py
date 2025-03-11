@@ -1,42 +1,54 @@
 import streamlit as st
+import pandas as pd
 import folium
 from streamlit_folium import st_folium
-import pandas as pd
 import matplotlib.pyplot as plt
 
-# Sample data for borehole locations
-boreholes = pd.DataFrame({
-    "Name": ["BH1", "BH2", "BH3"],
-    "Latitude": [16.0471, 16.0545, 16.0608],
-    "Longitude": [108.2063, 108.2102, 108.2150],
-    "Soil Type": ["Clay", "Sand", "Silt"],
-    "Depth (m)": [20, 30, 25]
-})
+# Load sample borehole data
+def load_data():
+    data = {
+        "ID": ["BH01", "BH02", "BH03"],
+        "Latitude": [16.0471, 16.0505, 16.0453],
+        "Longitude": [108.2067, 108.2109, 108.2155],
+        "Depth": [30, 25, 40],
+        "Soil Type": ["Clay", "Sand", "Silt"]
+    }
+    return pd.DataFrame(data)
 
-st.title("Geohole - Geological Data Viewer")
+# Sidebar navigation
+st.sidebar.title("Geohole App")
+page = st.sidebar.radio("Chọn chức năng", ["Trang chủ", "Bản đồ lỗ khoan", "Chi tiết lỗ khoan", "Xuất dữ liệu"])
 
-# Select borehole
-selected_bh = st.selectbox("Select a Borehole:", boreholes["Name"])
-bh_data = boreholes[boreholes["Name"] == selected_bh].iloc[0]
+data = load_data()
 
-# Display map
-st.subheader("Borehole Location")
-map_center = [bh_data["Latitude"], bh_data["Longitude"]]
-map_ = folium.Map(location=map_center, zoom_start=15)
-folium.Marker(map_center, popup=f"{selected_bh} - {bh_data['Soil Type']}").add_to(map_)
-st_folium(map_, width=700, height=400)
+if page == "Trang chủ":
+    st.title("Tổng quan dự án địa chất")
+    st.write("### Số lượng lỗ khoan: ", len(data))
+    
+    fig, ax = plt.subplots()
+    data.groupby("Soil Type").size().plot(kind="bar", ax=ax)
+    ax.set_title("Phân loại đất")
+    st.pyplot(fig)
 
-# Display borehole details
-st.subheader("Borehole Details")
-st.write(f"**Name:** {bh_data['Name']}")
-st.write(f"**Latitude:** {bh_data['Latitude']}")
-st.write(f"**Longitude:** {bh_data['Longitude']}")
-st.write(f"**Soil Type:** {bh_data['Soil Type']}")
-st.write(f"**Depth:** {bh_data['Depth (m)']} meters")
+elif page == "Bản đồ lỗ khoan":
+    st.title("Bản đồ lỗ khoan")
+    m = folium.Map(location=[16.05, 108.21], zoom_start=14)
+    for _, row in data.iterrows():
+        folium.Marker([row["Latitude"], row["Longitude"]],
+                      popup=f"Lỗ khoan: {row['ID']}\nĐộ sâu: {row['Depth']}m\nLoại đất: {row['Soil Type']}").add_to(m)
+    st_folium(m, width=700, height=500)
 
-# Sample chart
-st.subheader("Soil Depth Comparison")
-fig, ax = plt.subplots()
-ax.bar(boreholes["Name"], boreholes["Depth (m)"], color=['red', 'blue', 'green'])
-ax.set_ylabel("Depth (m)")
-st.pyplot(fig)
+elif page == "Chi tiết lỗ khoan":
+    st.title("Chi tiết lỗ khoan")
+    selected_id = st.selectbox("Chọn lỗ khoan", data["ID"])
+    borehole = data[data["ID"] == selected_id].iloc[0]
+    st.write(f"**Tọa độ**: {borehole['Latitude']}, {borehole['Longitude']}")
+    st.write(f"**Độ sâu**: {borehole['Depth']}m")
+    st.write(f"**Loại đất**: {borehole['Soil Type']}")
+
+elif page == "Xuất dữ liệu":
+    st.title("Xuất dữ liệu")
+    csv = data.to_csv(index=False).encode('utf-8')
+    st.download_button("Tải xuống CSV", csv, "boreholes.csv", "text/csv")
+    excel = data.to_excel(index=False, engine='xlsxwriter')
+    st.download_button("Tải xuống Excel", excel, "boreholes.xlsx")
