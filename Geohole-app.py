@@ -1,35 +1,42 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# Danh sách 5 lỗ khoan với tọa độ và thông tin chi tiết
-boreholes = [
-    {
-        "name": "Lỗ khoan 1",
-        "lat": 16.0678,
-        "lon": 108.2208,
-        "info": """<b>Chiều sâu:</b> 30m<br>
-                   <b>Lớp 1:</b> A Cát - 10m<br>
-                   <b>Lớp 2:</b> Sét - 15m<br>
-                   <b>Lớp 3:</b> Đá góc - 5m"""
-    },
-    {"name": "Lỗ khoan 2", "lat": 16.0544, "lon": 108.2022, "info": "Thông tin đang cập nhật..."},
-    {"name": "Lỗ khoan 3", "lat": 16.0478, "lon": 108.2100, "info": "Thông tin đang cập nhật..."},
-    {"name": "Lỗ khoan 4", "lat": 16.0600, "lon": 108.2300, "info": "Thông tin đang cập nhật..."},
-    {"name": "Lỗ khoan 5", "lat": 16.0555, "lon": 108.2155, "info": "Thông tin đang cập nhật..."},
-]
+# Sample data for borehole locations
+boreholes = pd.DataFrame({
+    "Name": ["BH1", "BH2", "BH3"],
+    "Latitude": [16.0471, 16.0545, 16.0608],
+    "Longitude": [108.2063, 108.2102, 108.2150],
+    "Soil Type": ["Clay", "Sand", "Silt"],
+    "Depth (m)": [20, 30, 25]
+})
 
-# Tạo bản đồ trung tâm tại Đà Nẵng
-m = folium.Map(location=[16.0544, 108.2022], zoom_start=12)
+st.title("Geohole - Geological Data Viewer")
 
-# Thêm điểm lỗ khoan vào bản đồ
-for borehole in boreholes:
-    folium.Marker(
-        location=[borehole["lat"], borehole["lon"]],
-        popup=folium.Popup(borehole["info"], max_width=300),
-        icon=folium.Icon(color="blue", icon="info-sign")
-    ).add_to(m)
+# Select borehole
+selected_bh = st.selectbox("Select a Borehole:", boreholes["Name"])
+bh_data = boreholes[boreholes["Name"] == selected_bh].iloc[0]
 
-# Hiển thị bản đồ trong Streamlit
-st.title("Bản đồ địa chất Đà Nẵng với thông tin lỗ khoan")
-st_folium(m, width=700, height=500)
+# Display map
+st.subheader("Borehole Location")
+map_center = [bh_data["Latitude"], bh_data["Longitude"]]
+map_ = folium.Map(location=map_center, zoom_start=15)
+folium.Marker(map_center, popup=f"{selected_bh} - {bh_data['Soil Type']}").add_to(map_)
+st_folium(map_, width=700, height=400)
+
+# Display borehole details
+st.subheader("Borehole Details")
+st.write(f"**Name:** {bh_data['Name']}")
+st.write(f"**Latitude:** {bh_data['Latitude']}")
+st.write(f"**Longitude:** {bh_data['Longitude']}")
+st.write(f"**Soil Type:** {bh_data['Soil Type']}")
+st.write(f"**Depth:** {bh_data['Depth (m)']} meters")
+
+# Sample chart
+st.subheader("Soil Depth Comparison")
+fig, ax = plt.subplots()
+ax.bar(boreholes["Name"], boreholes["Depth (m)"], color=['red', 'blue', 'green'])
+ax.set_ylabel("Depth (m)")
+st.pyplot(fig)
